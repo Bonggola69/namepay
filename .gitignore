@@ -1,0 +1,14 @@
+# Foundry build outputs
+out/
+cache/
+broadcast/
+
+# Deployment records that may contain secrets (none should ever be written here)
+deployments/*.env
+
+# Environment files — this repo must never contain one
+.env
+.env.*
+
+# Editor / OS
+.DS_Store
