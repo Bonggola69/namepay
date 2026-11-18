@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NamePay — Tip</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Name<span>Pay</span></h1>
+  <p>Tip someone by name.</p>
+  <button id="connectBtn" type="button">Connect wallet</button>
+</header>
+<main>
+  <div id="deployBanner" class="banner" role="status"></div>
+  <div id="accountInfo" class="status info"></div>
+
+  <section id="tipSection">
+    <h2 id="tipHeading">Tip</h2>
+    <p class="hint" id="tipHint">Enter a name to tip, or open this page with <code>?name=hanta</code> in the address.</p>
+    <div id="namePicker">
+      <label for="tipNameInput">Name to tip</label>
+      <input id="tipNameInput" type="text" placeholder="hanta" autocomplete="off" spellcheck="false">
+      <button id="setNameBtn" type="button">Show tip page</button>
+    </div>
+    <div id="tipForm" hidden>
+      <p>You are tipping <b id="tipTargetName"></b></p>
+      <div id="tipResolved" class="resolved"></div>
+      <div class="row">
+        <div>
+          <label for="tipToken">Token</label>
+          <select id="tipToken">
+            <option value="BNB">BNB</option>
+            <option value="USDT">USDT</option>
+            <option value="USDC">USDC</option>
+          </select>
+        </div>
+        <div>
+          <label for="tipAmount">Amount</label>
+          <input id="tipAmount" type="number" min="0" step="any" placeholder="0.05">
+        </div>
+      </div>
+      <label for="tipMemo">Message (optional)</label>
+      <input id="tipMemo" type="text" placeholder="Thanks for the great work!" maxlength="200">
+      <p class="hint" id="tipApproveNote" hidden>Token tips need two wallet confirmations: first an approval for the exact amount, then the tip itself. No unlimited approvals are used.</p>
+      <button id="tipBtn" type="button">Send tip</button>
+      <div id="tipStatus" class="status"></div>
+    </div>
+    <p class="hint"><a href="index.html">Open the full NamePay app</a></p>
+  </section>
+</main>
+<footer>
+  NamePay — pay by name on BNB Chain. No fees. No accounts. No data stored on a server.
+</footer>
+<script>
+// TBD-post-build: fill after mainnet deploy
+const NAMEPAY_ADDRESS = "0x0000000000000000000000000000000000000000";
+const BSC_CHAIN_ID = 56;
+const BSC_CHAIN_HEX = "0x38";
+const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
+const isDeployed = NAMEPAY_ADDRESS.toLowerCase() !== ZERO_ADDRESS;
+
+// Same signatures as docs/spec.md (subset used by this page).
+const NAMEPAY_ABI = [
+  "function resolveName(string name) view returns (address)",
+  "function payBNB(string name, string memo) payable",
+  "function payToken(address token, string name, uint256 amount, string memo)",
+];
+const ERC20_ABI = [
+  "function approve(address spender, uint256 amount) returns (bool)",
+];
+const TOKENS = {
+  BNB: { address: ZERO_ADDRESS, decimals: 18 },
+  USDT: { address: "0x55d398326f99059fF775485246999027B3197955", decimals: 18 },
+  USDC: { address: "0x8AC76a51cc950d9822D68b83fE1Ad97B32Cd580d", decimals: 18 },
+};
+
+let provider = null, signer = null, contract = null, readContract = null;
+let tipName = "";
+const $ = (id) => document.getElementById(id);
+
+function setStatus(el, msg, kind) {
+  el.textContent = msg;
+  el.className = "status" + (kind ? " " + kind : "");
+}
+function stripAi(raw) {
+  let name = (raw || "").trim().toLowerCase();
+  if (name.endsWith(".ai")) name = name.slice(0, -3);
+  return name;
+}
+function isValidName(name) {
+  return typeof name === "string" && name.length >= 1 && name.length <= 63
+    && /^[a-z0-9-]+$/.test(name) && !name.startsWith("-") && !name.endsWith("-");
+}
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  }[c]));
+}
+
+async function connectWallet() {
+  if (!window.ethereum) {
+    $("accountInfo").textContent = "No injected wallet found. Open this page in a browser with a wallet extension installed (for example MetaMask).";
+    return;
+  }
+  try {
+    const chainId = await window.ethereum.request({ method: "eth_chainId" });
+    if (parseInt(chainId, 16) !== BSC_CHAIN_ID) {
+      await window.ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BSC_CHAIN_HEX }] });
+    }
+    provider = new ethers.BrowserProvider(window.ethereum);
+    const accounts = await provider.send("eth_requestAccounts", []);
+    signer = await provider.getSigner();
+    contract = new ethers.Contract(NAMEPAY_ADDRESS, NAMEPAY_ABI, signer);
+    readContract = new ethers.Contract(NAMEPAY_ADDRESS, NAMEPAY_ABI, provider);
+    $("connectBtn").textContent = "Connected: " + accounts[0].slice(0, 6) + "…" + accounts[0].slice(-4);
+    $("accountInfo").textContent = "Connected as " + accounts[0] + " on BNB Smart Chain.";
+    if (tipName) showResolved();
+  } catch (err) {
+    $("accountInfo").textContent = "Wallet connection failed: " + (err && err.message ? err.message : err);
+  }
+}
+
+async function showResolved() {
+  const out = $("tipResolved");
+  if (!isDeployed) {
+    out.innerHTML = "Preview mode: <b>" + escapeHtml(tipName) + ".ai</b> — address lookup needs the deployed contract.";
+    return;
+  }
+  if (!readContract) {
+    out.textContent = "Connect your wallet to see who you are tipping.";
+    return;
+  }
+  try {
+    const addr = await readContract.resolveName(tipName);
+    out.innerHTML = "This tip goes to: <b>" + escapeHtml(addr) + "</b>";
+  } catch (e) {
+    out.textContent = "This name could not be resolved. It may not be registered yet.";
+  }
+}
+
+function showTipForm(name) {
+  tipName = name;
+  $("tipHeading").textContent = "Tip " + name + ".ai";
+  $("tipTargetName").textContent = name + ".ai";
+  $("namePicker").hidden = true;
+  $("tipForm").hidden = false;
+  showResolved();
+}
+
+async function sendTip() {
+  const statusEl = $("tipStatus");
+  if (!isDeployed) {
+    setStatus(statusEl, "Contract not deployed yet — connect to preview the interface. Sending is disabled until the contract is deployed.", "error");
+    return;
+  }
+  if (!signer) {
+    setStatus(statusEl, "Connect your wallet first.", "error");
+    return;
+  }
+  const tokenKey = $("tipToken").value;
+  const token = TOKENS[tokenKey];
+  const amountStr = $("tipAmount").value;
+  if (!amountStr || Number(amountStr) <= 0) {
+    setStatus(statusEl, "Enter an amount greater than zero.", "error");
+    return;
+  }
+  const memo = $("tipMemo").value || "";
+  let amount;
+  try { amount = ethers.parseUnits(amountStr.trim(), token.decimals); } catch (e) {
+    setStatus(statusEl, "Amount is not valid for this token.", "error");
+    return;
+  }
+  try {
+    const resolved = await readContract.resolveName(tipName);
+    if (!resolved || resolved.toLowerCase() === ZERO_ADDRESS) throw new Error("unresolved");
+  } catch (e) {
+    setStatus(statusEl, "Could not resolve that name. Check the name and try again.", "error");
+    return;
+  }
+  setStatus(statusEl, "Waiting for wallet confirmation…", "info");
+  try {
+    let tx;
+    if (tokenKey === "BNB") {
+      tx = await contract.payBNB(tipName, memo, { value: amount });
+    } else {
+      setStatus(statusEl, "Step 1 of 2: approve " + amountStr + " " + tokenKey + " for this tip. Confirm in your wallet.", "info");
+      const erc20 = new ethers.Contract(token.address, ERC20_ABI, signer);
+      const approveTx = await erc20.approve(NAMEPAY_ADDRESS, amount);
+      await approveTx.wait();
+      setStatus(statusEl, "Step 2 of 2: confirm the tip in your wallet.", "info");
+      tx = await contract.payToken(token.address, tipName, amount, memo);
+    }
+    const receipt = await tx.wait();
+    setStatus(statusEl, "Tip sent. Thank you! Transaction: " + receipt.hash, "ok");
+  } catch (err) {
+    setStatus(statusEl, "Tip failed: " + (err && err.reason ? err.reason : err && err.message ? err.message : err), "error");
+  }
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  const banner = $("deployBanner");
+  if (!isDeployed) {
+    banner.textContent = "Contract not deployed yet — connect to preview the interface. The Send tip button is disabled until the contract is deployed.";
+  } else {
+    banner.textContent = "Contract live at " + NAMEPAY_ADDRESS + " on BNB Smart Chain.";
+    banner.classList.add("ok");
+  }
+  if (!isDeployed) {
+    $("tipBtn").disabled = true;
+    $("tipBtn").title = "Disabled: contract not deployed yet.";
+  }
+  $("connectBtn").addEventListener("click", connectWallet);
+  $("tipToken").addEventListener("change", () => {
+    $("tipApproveNote").hidden = $("tipToken").value === "BNB";
+  });
+  $("setNameBtn").addEventListener("click", () => {
+    const name = stripAi($("tipNameInput").value);
+    if (!isValidName(name)) {
+      $("tipHint").textContent = "Invalid name: use 1–63 characters, letters, numbers and hyphens only.";
+      return;
+    }
+    history.replaceState(null, "", "?name=" + encodeURIComponent(name));
+    showTipForm(name);
+  });
+  $("tipBtn").addEventListener("click", sendTip);
+  const params = new URLSearchParams(location.search);
+  const qName = stripAi(params.get("name") || "");
+  if (qName) {
+    if (isValidName(qName)) showTipForm(qName);
+    else $("tipHint").textContent = "The name in the link is not valid. Enter a name below.";
+  }
+});
+</script>
+</body>
+</html>
