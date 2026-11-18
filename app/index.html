@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>NamePay — Pay by name on BNB Chain</title>
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.umd.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>Name<span>Pay</span></h1>
+  <p>Pay anyone by their Agent ID name instead of a hex address.</p>
+  <button id="connectBtn" type="button">Connect wallet</button>
+</header>
+<nav>
+  <a href="#send">Send</a>
+  <a href="#requests">Requests</a>
+  <a href="#split">Split</a>
+  <a href="#recurring">Recurring</a>
+  <a href="#tip">Tip link</a>
+  <a href="#history">History</a>
+  <a href="#name">My name</a>
+</nav>
+<main>
+  <div id="deployBanner" class="banner" role="status"></div>
+  <div id="accountInfo" class="status info"></div>
+
+  <section id="send">
+    <h2>Send</h2>
+    <p class="hint">Pay someone by their name, for example <code>hanta</code> or <code>hanta.ai</code>. The name is resolved to an address on chain before you confirm.</p>
+    <label for="sendName">Recipient name</label>
+    <input id="sendName" type="text" placeholder="hanta" autocomplete="off" spellcheck="false">
+    <div id="sendResolved" class="resolved"></div>
+    <div class="row">
+      <div>
+        <label for="sendToken">Token</label>
+        <select id="sendToken">
+          <option value="BNB">BNB</option>
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+      <div>
+        <label for="sendAmount">Amount</label>
+        <input id="sendAmount" type="number" min="0" step="any" placeholder="0.1">
+      </div>
+    </div>
+    <label for="sendMemo">Memo (optional)</label>
+    <input id="sendMemo" type="text" placeholder="Thanks!" maxlength="200">
+    <p class="hint" id="sendApproveNote" hidden>Token payments need two wallet confirmations: first an approval for the exact amount, then the payment itself. No unlimited approvals are used.</p>
+    <button id="sendBtn" type="button">Send payment</button>
+    <div id="sendStatus" class="status"></div>
+  </section>
+
+  <section id="requests">
+    <h2>Payment requests</h2>
+    <p class="hint">Ask someone to pay you. Create a request to their name, and they pay it from this page. Requests expire at the time you set.</p>
+    <label for="reqPayerName">Payer name (who should pay)</label>
+    <input id="reqPayerName" type="text" placeholder="hanta" autocomplete="off" spellcheck="false">
+    <div id="reqPayerResolved" class="resolved"></div>
+    <div class="row">
+      <div>
+        <label for="reqToken">Token</label>
+        <select id="reqToken">
+          <option value="BNB">BNB</option>
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+      <div>
+        <label for="reqAmount">Amount</label>
+        <input id="reqAmount" type="number" min="0" step="any" placeholder="0.1">
+      </div>
+    </div>
+    <label for="reqExpiry">Expires at</label>
+    <input id="reqExpiry" type="datetime-local">
+    <label for="reqMemo">Memo (optional)</label>
+    <input id="reqMemo" type="text" placeholder="Dinner share" maxlength="200">
+    <button id="createReqBtn" type="button">Create request</button>
+    <div id="reqStatus" class="status"></div>
+
+    <h3>Pay a request</h3>
+    <label for="payReqId">Request ID</label>
+    <input id="payReqId" type="number" min="0" step="1" placeholder="0">
+    <button id="loadReqBtn" type="button" class="secondary">Show request</button>
+    <div id="reqDetails" class="resolved"></div>
+    <button id="payReqBtn" type="button">Pay this request</button>
+    <button id="cancelReqBtn" type="button" class="secondary">Cancel this request</button>
+    <div id="payReqStatus" class="status"></div>
+  </section>
+
+  <section id="split">
+    <h2>Split payment</h2>
+    <p class="hint">Pay up to 20 people in one transaction. Each row is one name and one amount.</p>
+    <div id="splitRows"></div>
+    <div class="row">
+      <div>
+        <label for="splitToken">Token</label>
+        <select id="splitToken">
+          <option value="BNB">BNB</option>
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+      <div>
+        <label for="splitMemo">Memo (optional)</label>
+        <input id="splitMemo" type="text" placeholder="Team payout" maxlength="200">
+      </div>
+    </div>
+    <button id="addSplitRowBtn" type="button" class="secondary">Add recipient</button>
+    <button id="splitBtn" type="button">Send split payment</button>
+    <div id="splitTotal" class="resolved"></div>
+    <div id="splitStatus" class="status"></div>
+  </section>
+
+  <section id="recurring">
+    <h2>Recurring payments</h2>
+    <p class="hint">Fund a schedule up front and it pays out one period at a time. No allowance is requested: the money is held in the contract as escrow, and you can cancel any time to get the unspent part back.</p>
+    <label for="subPayeeName">Payee name</label>
+    <input id="subPayeeName" type="text" placeholder="hanta" autocomplete="off" spellcheck="false">
+    <div id="subPayeeResolved" class="resolved"></div>
+    <div class="row">
+      <div>
+        <label for="subToken">Token</label>
+        <select id="subToken">
+          <option value="BNB">BNB</option>
+          <option value="USDT">USDT</option>
+          <option value="USDC">USDC</option>
+        </select>
+      </div>
+      <div>
+        <label for="subAmount">Amount per period</label>
+        <input id="subAmount" type="number" min="0" step="any" placeholder="0.1">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="subPeriod">Period</label>
+        <select id="subPeriod">
+          <option value="86400">Daily</option>
+          <option value="604800">Weekly</option>
+          <option value="2592000">Monthly (30 days)</option>
+        </select>
+      </div>
+      <div>
+        <label for="subMaxPayments">Number of payments (1–24)</label>
+        <input id="subMaxPayments" type="number" min="1" max="24" step="1" value="12">
+      </div>
+    </div>
+    <div id="subTotal" class="resolved"></div>
+    <button id="createSubBtn" type="button">Create subscription</button>
+    <div id="subStatus" class="status"></div>
+
+    <h3>My subscriptions</h3>
+    <label for="subLookupId">Subscription ID</label>
+    <input id="subLookupId" type="number" min="0" step="1" placeholder="0">
+    <button id="loadSubBtn" type="button" class="secondary">Show subscription</button>
+    <div id="subDetails" class="resolved"></div>
+    <button id="execSubBtn" type="button">Execute due payment</button>
+    <button id="cancelSubBtn" type="button" class="danger">Cancel subscription (refunds unspent escrow)</button>
+    <div id="subActionStatus" class="status"></div>
+  </section>
+
+  <section id="tip">
+    <h2>Tip link</h2>
+    <p class="hint">Make a public tip page for any name and share the link. Anyone who opens it can tip that name.</p>
+    <label for="tipName">Name to receive tips</label>
+    <input id="tipName" type="text" placeholder="hanta" autocomplete="off" spellcheck="false">
+    <button id="makeTipLinkBtn" type="button">Make tip link</button>
+    <div id="tipLinkOut" class="resolved"></div>
+  </section>
+
+  <section id="history">
+    <h2>History</h2>
+    <p class="hint">Recent payments read from the contract's on-chain events. Names are resolved for display.</p>
+    <button id="refreshHistoryBtn" type="button" class="secondary">Refresh history</button>
+    <div id="historyList" class="resolved">No history loaded yet.</div>
+  </section>
+
+  <section id="name">
+    <h2>My name</h2>
+    <p class="hint">If you own an Agent ID name, register it here so your name shows next to your address in history. This only works for a name you own.</p>
+    <label for="myName">Your name</label>
+    <input id="myName" type="text" placeholder="hanta" autocomplete="off" spellcheck="false">
+    <button id="registerNameBtn" type="button">Register my name</button>
+    <div id="nameStatus" class="status"></div>
+  </section>
+</main>
+<footer>
+  NamePay — pay by name on BNB Chain. No fees. No accounts. No data stored on a server.
+</footer>
+<script src="app.js"></script>
+</body>
+</html>
