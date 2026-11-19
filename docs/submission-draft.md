@@ -35,11 +35,11 @@ ever requested). No fees are charged by the contract.
 
 ## Notes for the submitter
 
-- Source verification: VERIFIED on Sourcify 2026-11-19 08:18 WIB
-  (exact_match creation + runtime, via Remix's verify toggle at deploy).
-  BscScan badge still unconfirmed (page read blocked by Cloudflare;
-  API key settles it — check with the key, submit BscScan verification
-  with `forge verify-contract` if still missing).
+- Source verification: VERIFIED on BscScan and on Sourcify (confirmed
+  2026-11-19 ~08:42 WIB via Etherscan API V2 getsourcecode: ContractName
+  NamePay, compiler v0.8.34, optimizer off, 200 runs; Sourcify
+  exact_match creation + runtime from 08:18 WIB). Remix's verify toggle
+  at deploy did it.
 - The announcement contains NO submission form link — it only says to
   submit project name, website, contract addresses, Agent ID usage
   description and other required materials during the Submission Period.
