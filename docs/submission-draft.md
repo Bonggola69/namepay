@@ -43,8 +43,11 @@ ever requested). No fees are charged by the contract.
 - The announcement contains NO submission form link — it only says to
   submit project name, website, contract addresses, Agent ID usage
   description and other required materials during the Submission Period.
-  Find the submission channel (likely via the Binance Wallet app or a
-  follow-up announcement) before the deadline.
+  A web search on 2026-11-19 found no public submission form either
+  (only the Community Promotion survey for X-post links). The project
+  submission channel is most likely inside the Binance Wallet app or a
+  follow-up announcement — check the app's hackathon banner before
+  the deadline.
 - Innovation Award eligibility needs at least 30 Agent ID addresses
   interacting during the submission period — distribution is the real gap.
 - Submission deadline: 9 Dec 2026 08:00 UTC (15:00 WIB).
