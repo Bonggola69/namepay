@@ -3,9 +3,9 @@
 // broadcast while NAMEPAY_ADDRESS is the zero address.
 
 // TBD-post-build: fill after mainnet deploy
-const NAMEPAY_ADDRESS = "0x0000000000000000000000000000000000000000";
+const NAMEPAY_ADDRESS = "0x7987124EB007d383021986FcFD5024EC4D2e303E";
 // TBD-post-build: fill with the block number the contract was deployed in.
-const DEPLOYMENT_BLOCK = 0;
+const DEPLOYMENT_BLOCK = 134414026;
 
 const BSC_CHAIN_ID = 56;
 const BSC_CHAIN_HEX = "0x38";
