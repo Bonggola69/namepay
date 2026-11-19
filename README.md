@@ -99,6 +99,7 @@ Static site in `app/` — vanilla JS + ethers v6 via CDN. No build step, no back
 - Deploy tx: `0x041ef0079914f4238c192c9c3f231b2d312142d8deb98074709118b24d4b3973` (block 134414026, status success, gas used 4,712,608)
 - Deployer: `0x024f89c5F94A831270484cDEb45c74FEf4eB2417` (Ezra's Binance App Web3 wallet, funded 0.0005 BNB from hanta.ai; the Agentic Wallet itself cannot deploy — `baw contract-call` requires a `to` address, so deployment went through Remix + WalletConnect)
 - Verified live: `owner()` = deployer, `AGENT_ID()` = `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`, `resolveName("hanta")` = `0xB23D93c20a420d52d3F88333F7Be9a25927C929b`, USDT/USDC allowed, not paused.
+- Live site: https://bonggola69.github.io/namepay/ (GitHub Pages, source `main` `/docs`; `docs/` holds a published copy of `app/` plus `.nojekyll` — the Pages API only allows `/` or `/docs` as source, so keep `docs/` in sync with `app/` on every frontend change).
 
 Measured dry-run (2026-11-18, no broadcast): deployment gas 2,856,319 (test-EVM) / 3,713,214 gas-limit estimate (fork), about 0.000143–0.000186 BNB at 0.05 gwei.
 
