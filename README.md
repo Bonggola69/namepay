@@ -5,7 +5,7 @@
 NamePay is a single smart contract plus a static frontend, built for the Agent ID Hackathon (Binance Wallet + BNB Chain). Send BNB, USDT, or USDC to `hanta` instead of `0xB23D…929b`. Request a payment from someone by name. Split a payment across up to 20 names. Set up a recurring payment funded up front from escrow — never from an allowance.
 
 - **Chain:** BNB Smart Chain (chain id 56)
-- **Status:** in build. **NOT deployed yet** — mainnet deployment is a human gate (see [Deployment](#deployment)).
+- **Status:** deployed on BNB Smart Chain mainnet 2026-11-19. Contract `0x7987124EB007d383021986FcFD5024EC4D2e303E` ([BscScan](https://bscscan.com/address/0x7987124EB007d383021986FcFD5024EC4D2e303E)), deploy tx `0x041ef0079914f4238c192c9c3f231b2d312142d8deb98074709118b24d4b3973`.
 - **License:** MIT
 
 ## How Agent ID resolution works
@@ -93,7 +93,12 @@ Static site in `app/` — vanilla JS + ethers v6 via CDN. No build step, no back
 
 ## Deployment
 
-**Status: NOT deployed yet.** Deployment is a human gate — see the full runbook in [docs/deployment.md](docs/deployment.md).
+**Status: DEPLOYED on BNB Smart Chain mainnet, 2026-11-19.**
+
+- Contract: `0x7987124EB007d383021986FcFD5024EC4D2e303E` — [BscScan](https://bscscan.com/address/0x7987124EB007d383021986FcFD5024EC4D2e303E)
+- Deploy tx: `0x041ef0079914f4238c192c9c3f231b2d312142d8deb98074709118b24d4b3973` (block 134414026, status success, gas used 4,712,608)
+- Deployer: `0x024f89c5F94A831270484cDEb45c74FEf4eB2417` (Ezra's Binance App Web3 wallet, funded 0.0005 BNB from hanta.ai; the Agentic Wallet itself cannot deploy — `baw contract-call` requires a `to` address, so deployment went through Remix + WalletConnect)
+- Verified live: `owner()` = deployer, `AGENT_ID()` = `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F`, `resolveName("hanta")` = `0xB23D93c20a420d52d3F88333F7Be9a25927C929b`, USDT/USDC allowed, not paused.
 
 Measured dry-run (2026-11-18, no broadcast): deployment gas 2,856,319 (test-EVM) / 3,713,214 gas-limit estimate (fork), about 0.000143–0.000186 BNB at 0.05 gwei.
 
