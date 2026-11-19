@@ -50,4 +50,6 @@ ever requested). No fees are charged by the contract.
   the deadline.
 - Innovation Award eligibility needs at least 30 Agent ID addresses
   interacting during the submission period — distribution is the real gap.
+  Baseline checked 2026-11-19 ~08:44 WIB (block 134417505): 0
+  interactions so far, only the deploy event on-chain.
 - Submission deadline: 9 Dec 2026 08:00 UTC (15:00 WIB).
